@@ -150,8 +150,23 @@
             window.location.href = 'checkout.html';
         }
 
+        // AGREGAR ESTA FUNCIÓN PARA CARGAR LOS ITEMS CUANDO LA PÁGINA SE ABRE
+        async function cargarVistaCarrito() {
+            if (!carritoManager) {
+                setTimeout(cargarVistaCarrito, 100);
+                return;
+            }
+
+            await carritoManager.cargarCarrito();
+            carritoManager.actualizarVistaCarrito();
+            carritoManager.actualizarContadorCarrito();
+        }
+
         // Actualizar el total final cuando se actualice el carrito
         document.addEventListener('DOMContentLoaded', function() {
+            // Cargar la vista del carrito cuando la página se carga
+            cargarVistaCarrito();
+
             const observer = new MutationObserver(function() {
                 const total = document.getElementById('carrito-total').textContent;
                 document.getElementById('carrito-total-final').textContent = total;

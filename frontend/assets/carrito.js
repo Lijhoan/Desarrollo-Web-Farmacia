@@ -10,6 +10,7 @@ class CarritoManager {
         await this.cargarCarrito();
         this.actualizarContadorCarrito();
         this.setupEventListeners();
+        this.actualizarVistaCarrito(); // AGREGAR ESTA LÍNEA para actualizar la vista si estamos en la página del carrito
     }
 
     async cargarCarrito() {
@@ -54,8 +55,8 @@ class CarritoManager {
             
             const data = await response.json();
             this.carrito = data.carrito;
-            this.actualizarVistaCarrito();
-            this.actualizarContadorCarrito();
+            this.actualizarVistaCarrito(); // Actualizar vista
+            this.actualizarContadorCarrito(); // Actualizar contador
             
         } catch (error) {
             console.error('Error al actualizar cantidad:', error);
@@ -70,8 +71,8 @@ class CarritoManager {
             
             const data = await response.json();
             this.carrito = data.carrito;
-            this.actualizarVistaCarrito();
-            this.actualizarContadorCarrito();
+            this.actualizarVistaCarrito(); // Actualizar vista
+            this.actualizarContadorCarrito(); // Actualizar contador
             this.mostrarNotificacion('Producto eliminado del carrito');
             
         } catch (error) {
@@ -80,17 +81,22 @@ class CarritoManager {
     }
 
     async limpiarCarrito() {
+        if (this.carrito.length === 0) {
+            this.mostrarNotificacion('El carrito ya está vacío', 'error');
+            return;
+        }
+        
         try {
             const response = await fetch(`${this.baseURL}/carrito/limpiar`, {
                 method: 'DELETE'
             });
-            
+
             const data = await response.json();
             this.carrito = data.carrito;
-            this.actualizarVistaCarrito();
-            this.actualizarContadorCarrito();
+            this.actualizarVistaCarrito(); // Actualizar vista
+            this.actualizarContadorCarrito(); // Actualizar contador
             this.mostrarNotificacion('Carrito limpiado');
-            
+
         } catch (error) {
             console.error('Error al limpiar carrito:', error);
         }
@@ -104,7 +110,7 @@ class CarritoManager {
         const contador = this.carrito.reduce((total, item) => total + item.cantidad, 0);
         const elementos = document.querySelectorAll('.carrito-contador');
         elementos.forEach(el => el.textContent = contador);
-        
+
         // Mostrar/ocultar badge
         elementos.forEach(el => {
             if (contador > 0) {
@@ -118,36 +124,53 @@ class CarritoManager {
     actualizarVistaCarrito() {
         const carritoItems = document.getElementById('carrito-items');
         const carritoTotal = document.getElementById('carrito-total');
-        
-        if (!carritoItems) return;
-        
+
+        if (!carritoItems) return; // Si no estamos en la página del carrito, salir
+
         if (this.carrito.length === 0) {
-            carritoItems.innerHTML = '<p class="text-center">El carrito está vacío</p>';
-            if (carritoTotal) carritoTotal.textContent = '$0.00';
-            return;
+          carritoItems.innerHTML =
+            '<div class="text-center py-4"><i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i><p class="text-muted">El carrito está vacío</p><a href="index.html" class="btn btn-primary">Continuar Comprando</a></div>';
+          if (carritoTotal) carritoTotal.textContent = "$0.00";
+          return;
         }
-        
-        carritoItems.innerHTML = this.carrito.map(item => `
+
+        carritoItems.innerHTML = this.carrito
+          .map(
+            (item) => `
             <div class="carrito-item d-flex align-items-center mb-3 p-3 border rounded">
-                <img src="${item.imagen}" alt="${item.nombre}" class="me-3" style="width: 60px; height: 60px; object-fit: cover;">
+                <img src="${item.imagen}" alt="${
+              item.nombre
+            }" class="me-3" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;">
                 <div class="flex-grow-1">
                     <h6 class="mb-1">${item.nombre}</h6>
                     <small class="text-muted">${item.categoria}</small>
                     <div class="d-flex align-items-center mt-2">
-                        <button class="btn btn-sm btn-outline-secondary me-2" onclick="carritoManager.actualizarCantidad('${item.id}', ${item.cantidad - 1})">-</button>
-                        <span class="mx-2">${item.cantidad}</span>
-                        <button class="btn btn-sm btn-outline-secondary ms-2" onclick="carritoManager.actualizarCantidad('${item.id}', ${item.cantidad + 1})">+</button>
+                        <button class="btn btn-sm btn-outline-secondary me-2" onclick="carritoManager.actualizarCantidad('${
+                          item.id
+                        }', ${item.cantidad - 1})" ${
+              item.cantidad <= 1 ? "disabled" : ""
+            }>-</button>
+                        <span class="mx-2 fw-bold">${item.cantidad}</span>
+                        <button class="btn btn-sm btn-outline-secondary ms-2" onclick="carritoManager.actualizarCantidad('${
+                          item.id
+                        }', ${item.cantidad + 1})">+</button>
                     </div>
                 </div>
                 <div class="text-end">
-                    <div class="fw-bold">$${(item.precio * item.cantidad).toFixed(2)}</div>
-                    <button class="btn btn-sm btn-outline-danger mt-1" onclick="carritoManager.eliminarProducto('${item.id}')">
+                    <div class="fw-bold text-primary fs-5">$${(
+                      item.precio * item.cantidad
+                    ).toFixed(2)}</div>
+                    <button class="btn btn-sm btn-outline-danger mt-1" onclick="carritoManager.eliminarProducto('${
+                      item.id
+                    }')" title="Eliminar producto">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
             </div>
-        `).join('');
-        
+        `
+          )
+          .join("");
+
         if (carritoTotal) {
             carritoTotal.textContent = `$${this.calcularTotal()}`;
         }
@@ -166,18 +189,37 @@ class CarritoManager {
     }
 
     extraerDatosProducto(card, button) {
-        const titulo = card.querySelector('.card-title').textContent;
-        const precioText = card.querySelector('.fw-bold, .product-price').textContent;
-        const precio = precioText.replace('$', '').replace(',', '');
-        const imagen = card.querySelector('.card-img-top').src;
-        
-        return {
-            id: `prod-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            nombre: titulo,
-            precio: parseFloat(precio),
-            imagen: imagen,
-            categoria: this.obtenerCategoriaActual()
-        };
+      const titulo = card.querySelector(".card-title").textContent;
+
+      // Mejorar la búsqueda de precio
+      let precioElement = card.querySelector(
+        ".fw-bold.text-primary, .product-price, .fw-bold.text-danger"
+      );
+      let precioText = "";
+
+      if (precioElement) {
+        precioText = precioElement.textContent;
+      } else {
+        // Si no encuentra precio específico, buscar cualquier elemento con precio
+        const todoTexto = card.textContent;
+        const matches = todoTexto.match(/\$\d+\.?\d*/g);
+        if (matches && matches.length > 0) {
+          // Tomar el último precio encontrado (generalmente el precio final)
+          precioText = matches[matches.length - 1];
+        }
+      }
+
+      const precio =
+        parseFloat(precioText.replace("$", "").replace(",", "").trim()) || 10.0; // Precio por defecto si no se encuentra
+      const imagen = card.querySelector(".card-img-top").src;
+
+      return {
+        id: `prod-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        nombre: titulo,
+        precio: precio,
+        imagen: imagen,
+        categoria: this.obtenerCategoriaActual(),
+      };
     }
 
     obtenerCategoriaActual() {
