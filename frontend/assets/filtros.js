@@ -11,36 +11,104 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnAplicarFiltros = document.querySelector('.card-body .btn-farmacia'); // Botón para aplicar filtros
     const mostrandoTexto = document.querySelector('.d-flex p.mb-0'); // Texto "Mostrando X de Y productos"
     
-    // Asignamos categorías a los productos existentes (ya que no tienen atributos de categoría)
+    // Detectar la página actual para aplicar filtros específicos
+    const paginaActual = window.location.pathname.split('/').pop().replace('.html', '');
+    
+    // Mapeo de IDs de checkbox a categorías según la página
+    const mapeoCategoria = {
+        'medicamentos': {
+            'categoria1': 'analgesicos',
+            'categoria2': 'antibioticos', 
+            'categoria3': 'antigripales',
+            'categoria4': 'otros'
+        },
+        'cuidado-personal': {
+            'categoria1': 'higiene-bucal',
+            'categoria2': 'cuidado-capilar',
+            'categoria3': 'higiene-corporal',
+            'categoria4': 'desodorantes'
+        },
+        'vitaminas': {
+            'tipo1': 'multivitaminicos',
+            'tipo2': 'vitamina-c',
+            'tipo3': 'vitamina-d',
+            'tipo4': 'omega-3',
+            'tipo5': 'otros'
+        },
+        'cuidado-piel': {
+            'categoria1': 'cremas',
+            'categoria2': 'protector-solar',
+            'categoria3': 'limpiadores',
+            'categoria4': 'mascarillas',
+            'categoria5': 'sueros'
+        }
+    };
+    
+    // Asignamos categorías a los productos existentes según la página
     const asignarCategorias = () => {
         const productos = document.querySelectorAll('.col-md-6.col-lg-4.mb-4');
         
-        // Asignamos categorías según el título del producto
         productos.forEach(producto => {
             const titulo = producto.querySelector('.card-title').textContent.toLowerCase();
-            let categoria = '';
+            let categoria = 'otros';
             
-            // Determinamos la categoría según el nombre del producto
-            if (titulo.includes('paracetamol') || titulo.includes('ibuprofeno') || titulo.includes('aspirina')) {
-                categoria = 'analgesicos';
-                producto.setAttribute('data-categoria', 'analgesicos');
-                producto.setAttribute('data-original', ''); // Para restaurar visibilidad
-            } else if (titulo.includes('amoxicilina')) {
-                categoria = 'antibioticos';
-                producto.setAttribute('data-categoria', 'antibioticos');
-                producto.setAttribute('data-original', ''); // Para restaurar visibilidad
-            } else if (titulo.includes('loratadina')) {
-                categoria = 'antigripales';
-                producto.setAttribute('data-categoria', 'antigripales');
-                producto.setAttribute('data-original', ''); // Para restaurar visibilidad
-            } else {
-                categoria = 'otros';
-                producto.setAttribute('data-categoria', 'otros');
-                producto.setAttribute('data-original', ''); // Para restaurar visibilidad
+            // Asignar categorías según la página y el título del producto
+            switch(paginaActual) {
+                case 'medicamentos':
+                    if (titulo.includes('paracetamol') || titulo.includes('ibuprofeno') || titulo.includes('aspirina')) {
+                        categoria = 'analgesicos';
+                    } else if (titulo.includes('amoxicilina')) {
+                        categoria = 'antibioticos';
+                    } else if (titulo.includes('loratadina')) {
+                        categoria = 'antigripales';
+                    }
+                    break;
+                    
+                case 'cuidado-personal':
+                    if (titulo.includes('dental') || titulo.includes('cepillo') || titulo.includes('pasta') || titulo.includes('enjuague')) {
+                        categoria = 'higiene-bucal';
+                    } else if (titulo.includes('shampoo') || titulo.includes('acondicionador') || titulo.includes('cabello')) {
+                        categoria = 'cuidado-capilar';
+                    } else if (titulo.includes('jabón') || titulo.includes('gel') || titulo.includes('ducha')) {
+                        categoria = 'higiene-corporal';
+                    } else if (titulo.includes('desodorante') || titulo.includes('antitranspirante')) {
+                        categoria = 'desodorantes';
+                    }
+                    break;
+                    
+                case 'vitaminas':
+                    if (titulo.includes('multivitamínico') || titulo.includes('complejo')) {
+                        categoria = 'multivitaminicos';
+                    } else if (titulo.includes('vitamina c')) {
+                        categoria = 'vitamina-c';
+                    } else if (titulo.includes('vitamina d')) {
+                        categoria = 'vitamina-d';
+                    } else if (titulo.includes('omega') || titulo.includes('ácidos grasos')) {
+                        categoria = 'omega-3';
+                    }
+                    break;
+                    
+                case 'cuidado-piel':
+                    if (titulo.includes('crema') || titulo.includes('hidratante') || titulo.includes('loción')) {
+                        categoria = 'cremas';
+                    } else if (titulo.includes('protector') || titulo.includes('solar') || titulo.includes('fps')) {
+                        categoria = 'protector-solar';
+                    } else if (titulo.includes('limpiador') || titulo.includes('limpieza')) {
+                        categoria = 'limpiadores';
+                    } else if (titulo.includes('mascarilla') || titulo.includes('máscara')) {
+                        categoria = 'mascarillas';
+                    } else if (titulo.includes('suero') || titulo.includes('sérum')) {
+                        categoria = 'sueros';
+                    }
+                    break;
             }
             
+            // Asignar la categoría como atributo al producto
+            producto.setAttribute('data-categoria', categoria);
+            producto.setAttribute('data-original', ''); // Para restaurar visibilidad
+            
             // Extraemos y asignamos el precio como atributo data-precio
-            const precioTexto = producto.querySelector('.fw-bold.text-primary').textContent;
+            const precioTexto = producto.querySelector('.fw-bold.text-primary, .price, .text-price').textContent;
             const precio = parseFloat(precioTexto.replace('$', ''));
             producto.setAttribute('data-precio', precio);
         });
@@ -48,6 +116,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Configurar slider de precio
     const configurarSliderPrecio = () => {
+        if (!filtroPrecio) return; // Si no existe el slider de precio, salir
+        
         // Encontramos el precio mínimo y máximo de los productos
         const productos = document.querySelectorAll('[data-precio]');
         let minPrecio = Infinity;
@@ -55,9 +125,14 @@ document.addEventListener('DOMContentLoaded', function() {
         
         productos.forEach(producto => {
             const precio = parseFloat(producto.getAttribute('data-precio'));
-            minPrecio = Math.min(minPrecio, precio);
-            maxPrecio = Math.max(maxPrecio, precio);
+            if (!isNaN(precio)) {
+                minPrecio = Math.min(minPrecio, precio);
+                maxPrecio = Math.max(maxPrecio, precio);
+            }
         });
+        
+        // Si no hay productos con precios válidos, salir
+        if (minPrecio === Infinity || maxPrecio === 0) return;
         
         // Configuramos el slider
         filtroPrecio.min = Math.floor(minPrecio);
@@ -85,17 +160,17 @@ document.addEventListener('DOMContentLoaded', function() {
         const categoriasSeleccionadas = [];
         filtrosCategorias.forEach(checkbox => {
             if (checkbox.checked) {
-                const categoria = checkbox.id.replace('categoria', '');
-                switch(categoria) {
-                    case '1': categoriasSeleccionadas.push('analgesicos'); break;
-                    case '2': categoriasSeleccionadas.push('antibioticos'); break;
-                    case '3': categoriasSeleccionadas.push('antigripales'); break;
+                const checkboxId = checkbox.id;
+                // Usamos el mapeo específico de la página actual
+                const mappings = mapeoCategoria[paginaActual];
+                if (mappings && mappings[checkboxId]) {
+                    categoriasSeleccionadas.push(mappings[checkboxId]);
                 }
             }
         });
         
         // Obtenemos valor máximo de precio
-        const precioMaximo = parseInt(filtroPrecio.value);
+        const precioMaximo = filtroPrecio ? parseInt(filtroPrecio.value) : Infinity;
         
         // Filtramos productos
         let contadorProductosMostrados = 0;
@@ -131,9 +206,14 @@ document.addEventListener('DOMContentLoaded', function() {
             checkbox.checked = false;
         });
         
-        // Restaurar slider a valor máximo
-        filtroPrecio.value = filtroPrecio.max;
-        document.getElementById('precioValor').textContent = `Hasta $${filtroPrecio.max}`;
+        // Restaurar slider a valor máximo si existe
+        if (filtroPrecio) {
+            filtroPrecio.value = filtroPrecio.max;
+            const precioValorDiv = document.getElementById('precioValor');
+            if (precioValorDiv) {
+                precioValorDiv.textContent = `Hasta $${filtroPrecio.max}`;
+            }
+        }
         
         // Mostrar todos los productos
         const productos = document.querySelectorAll('.col-md-6.col-lg-4.mb-4');
@@ -157,14 +237,16 @@ document.addEventListener('DOMContentLoaded', function() {
         configurarSliderPrecio();
         
         // Evento para botón de aplicar filtros
-        btnAplicarFiltros.addEventListener('click', aplicarFiltros);
-        
-        // Añadir botón para restaurar filtros
-        const btnRestaurar = document.createElement('button');
-        btnRestaurar.className = 'btn btn-outline-secondary btn-sm w-100 mt-2';
-        btnRestaurar.textContent = 'Restaurar Filtros';
-        btnRestaurar.addEventListener('click', restaurarFiltros);
-        btnAplicarFiltros.insertAdjacentElement('afterend', btnRestaurar);
+        if (btnAplicarFiltros) {
+            btnAplicarFiltros.addEventListener('click', aplicarFiltros);
+            
+            // Añadir botón para restaurar filtros
+            const btnRestaurar = document.createElement('button');
+            btnRestaurar.className = 'btn btn-outline-secondary btn-sm w-100 mt-2';
+            btnRestaurar.textContent = 'Restaurar Filtros';
+            btnRestaurar.addEventListener('click', restaurarFiltros);
+            btnAplicarFiltros.insertAdjacentElement('afterend', btnRestaurar);
+        }
     };
     
     // Iniciar la aplicación
